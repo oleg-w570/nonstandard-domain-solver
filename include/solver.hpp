@@ -19,6 +19,8 @@ class Solver {
 
   int K;
   Vector tau;
+  Matrix v_local_prev;
+  Matrix v_global_prev;
 
  public:
   Matrix u, v, diff;
@@ -34,12 +36,13 @@ class Solver {
   void CalculateBorder(Matrix& z);
   void CalculateTrueSolution();
   double VectorDiffNorm(const Matrix& v1, const Matrix& v2) const;
-  void UpdateElement(std::size_t i, std::size_t j, double t, const Matrix& v_prev);
-  void ChebishevIteration(int s, const Matrix& v_prev);
+  double ComputeNextValue(std::size_t i, std::size_t j, double t) const;
+  void ChebishevLocalIteration(double t);
   void CopyMatrix(const Matrix& from, Matrix& to);
+  void ChebishevGlobalIteration();
   void ChebishevMethod();
   void CalculateDiffSolutions();
-  void UpdateDiscrepancy(std::size_t i, std::size_t j, double& R_max);
+  double ComputeDiscrepancyValue(std::size_t i, std::size_t j) const;
   double CalculateDiscrepancy();
 
  public:

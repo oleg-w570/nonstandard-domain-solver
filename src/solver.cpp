@@ -126,35 +126,42 @@ double Solver::VectorDiffNorm(const Matrix &v1, const Matrix &v2) const {
   return max_diff;
 }
 
-inline void Solver::UpdateElement(std::size_t i, std::size_t j, double t, const Matrix &v_prev) {
-  const double term1 = v_prev[i][j] * (1 + t * A);
-  const double term2 = t * (k2 * (v_prev[i][j - 1] + v_prev[i][j + 1]));
-  const double term3 = t * (h2 * (v_prev[i - 1][j] + v_prev[i + 1][j]));
-  const double term4 = t * task.F(x[i], y[j]);
-
-  v[i][j] = term1 + term2 + term3 - term4;
+inline double Solver::ComputeNextValue(std::size_t i, std::size_t j, double t) const {
+  return (v_local_prev[i][j] * (1 + t * A) +
+          t * (k2 * (v_local_prev[i][j - 1] + v_local_prev[i][j + 1]) +
+               h2 * (v_local_prev[i - 1][j] + v_local_prev[i + 1][j]) - task.F(x[i], y[j])));
 }
 
-void Solver::ChebishevIteration(int s, const Matrix &v_prev) {
+void Solver::ChebishevLocalIteration(double t) {
   std::size_t i, j;
-  const double t = tau[s];
 
-  for (j = 1; j < bottom; ++j) {
-    for (i = 1; i < n; ++i) {
-      UpdateElement(i, j, t, v_prev);
+  for (i = 1; i < in_left; ++i) {
+    for (j = 1; j < m; ++j) {
+      v[i][j] = ComputeNextValue(i, j, t);
     }
   }
-  for (j = bottom; j < top + 1; ++j) {
-    for (i = 1; i < in_left; ++i) {
-      UpdateElement(i, j, t, v_prev);
+
+  for (i = in_left; i <= in_right; ++i) {
+    for (j = 1; j < bottom; ++j) {
+      v[i][j] = ComputeNextValue(i, j, t);
     }
-    for (i = in_right + 1; i < right; ++i) {
-      UpdateElement(i, j, t, v_prev);
+    for (j = top + 1; j < m; ++j) {
+      v[i][j] = ComputeNextValue(i, j, t);
     }
   }
-  for (j = top + 1; j < m; ++j) {
-    for (i = 1; i < n; ++i) {
-      UpdateElement(i, j, t, v_prev);
+
+  for (i = in_right + 1; i < right; ++i) {
+    for (j = 1; j < m; ++j) {
+      v[i][j] = ComputeNextValue(i, j, t);
+    }
+  }
+
+  for (i = right; i < n; ++i) {
+    for (j = 1; j < bottom; ++j) {
+      v[i][j] = ComputeNextValue(i, j, t);
+    }
+    for (j = top + 1; j < m; ++j) {
+      v[i][j] = ComputeNextValue(i, j, t);
     }
   }
 }
@@ -165,24 +172,31 @@ inline void Solver::CopyMatrix(const Matrix &from, Matrix &to) {
   }
 }
 
+void Solver::ChebishevGlobalIteration() {
+  CopyMatrix(v, v_global_prev);
+
+  for (const auto &t : tau) {
+    std::swap(v, v_local_prev);
+    ChebishevLocalIteration(t);
+  }
+}
+
 void Solver::ChebishevMethod() {
-  Matrix v_prev(n + 1, Vector(m + 1));
-  Matrix v_local_prev(n + 1, Vector(m + 1));
+  v_global_prev = Matrix(n + 1, Vector(m + 1));
+  v_local_prev = Matrix(n + 1, Vector(m + 1));
+  CalculateBorder(v_local_prev);
 
   n_iter = 0;
   accuracy = eps + 1;
 
   while (n_iter < max_iter && accuracy > eps) {
-    CopyMatrix(v, v_prev);
-
-    for (int s = 0; s < K; ++s) {
-      CopyMatrix(v, v_local_prev);
-      ChebishevIteration(s, v_local_prev);
-    }
-
-    accuracy = VectorDiffNorm(v, v_prev);
+    ChebishevGlobalIteration();
+    accuracy = VectorDiffNorm(v, v_global_prev);
     n_iter += K;
   }
+
+  v_local_prev.clear();
+  v_global_prev.clear();
 }
 
 void Solver::CalculateDiffSolutions() {
@@ -201,10 +215,9 @@ void Solver::CalculateDiffSolutions() {
   }
 }
 
-void Solver::UpdateDiscrepancy(std::size_t i, std::size_t j, double &R_max) {
-  const double R = std::abs(A * v[i][j] + h2 * (v[i - 1][j] + v[i + 1][j]) +
-                            k2 * (v[i][j - 1] + v[i][j + 1]) - task.F(x[i], y[j]));
-  if (R > R_max) R_max = R;
+inline double Solver::ComputeDiscrepancyValue(std::size_t i, std::size_t j) const {
+  return std::abs(A * v[i][j] + h2 * (v[i - 1][j] + v[i + 1][j]) +
+                  k2 * (v[i][j - 1] + v[i][j + 1]) - task.F(x[i], y[j]));
 }
 
 double Solver::CalculateDiscrepancy() {
@@ -213,20 +226,24 @@ double Solver::CalculateDiscrepancy() {
 
   for (j = 1; j < bottom; ++j) {
     for (i = 1; i < n; ++i) {
-      UpdateDiscrepancy(i, j, R_max);
+      const double R = ComputeDiscrepancyValue(i, j);
+      if (R > R_max) R_max = R;
     }
   }
   for (j = bottom; j < top + 1; ++j) {
     for (i = 1; i < in_left; ++i) {
-      UpdateDiscrepancy(i, j, R_max);
+      const double R = ComputeDiscrepancyValue(i, j);
+      if (R > R_max) R_max = R;
     }
     for (i = in_right + 1; i < right; ++i) {
-      UpdateDiscrepancy(i, j, R_max);
+      const double R = ComputeDiscrepancyValue(i, j);
+      if (R > R_max) R_max = R;
     }
   }
   for (j = top + 1; j < m; ++j) {
     for (i = 1; i < n; ++i) {
-      UpdateDiscrepancy(i, j, R_max);
+      const double R = ComputeDiscrepancyValue(i, j);
+      if (R > R_max) R_max = R;
     }
   }
   return R_max;

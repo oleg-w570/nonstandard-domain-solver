@@ -133,38 +133,63 @@ inline double Solver::ComputeNextValue(std::size_t i, std::size_t j, double t) c
 }
 
 void Solver::ChebishevLocalIteration(double t) {
-  std::size_t i, j;
+  #pragma omp parallel
+  {
+    #pragma omp sections
+    {
+      #pragma omp section
+      {
+        // Параллелизация внутри секции
+        #pragma omp parallel for schedule(dynamic)
+        for (int i = 1; i < in_left; ++i) {
+          for (std::size_t j = 1; j < m; ++j) {
+            v[i][j] = ComputeNextValue(i, j, t);
+          }
+        }
+      }
 
-  for (i = 1; i < in_left; ++i) {
-    for (j = 1; j < m; ++j) {
-      v[i][j] = ComputeNextValue(i, j, t);
-    }
-  }
+      #pragma omp section
+      {
+        // Параллелизация внутри секции
+        #pragma omp parallel for schedule(dynamic)
+        for (int i = in_left; i <= in_right; ++i) {
+          for (std::size_t j = 1; j < bottom; ++j) {
+            v[i][j] = ComputeNextValue(i, j, t);
+          }
+          for (std::size_t j = top + 1; j < m; ++j) {
+            v[i][j] = ComputeNextValue(i, j, t);
+          }
+        }
+      }
 
-  for (i = in_left; i <= in_right; ++i) {
-    for (j = 1; j < bottom; ++j) {
-      v[i][j] = ComputeNextValue(i, j, t);
-    }
-    for (j = top + 1; j < m; ++j) {
-      v[i][j] = ComputeNextValue(i, j, t);
-    }
-  }
+      #pragma omp section
+      {
+        // Параллелизация внутри секции
+        #pragma omp parallel for schedule(dynamic)
+        for (int i = in_right + 1; i < right; ++i) {
+          for (std::size_t j = 1; j < m; ++j) {
+            v[i][j] = ComputeNextValue(i, j, t);
+          }
+        }
+      }
 
-  for (i = in_right + 1; i < right; ++i) {
-    for (j = 1; j < m; ++j) {
-      v[i][j] = ComputeNextValue(i, j, t);
-    }
-  }
-
-  for (i = right; i < n; ++i) {
-    for (j = 1; j < bottom; ++j) {
-      v[i][j] = ComputeNextValue(i, j, t);
-    }
-    for (j = top + 1; j < m; ++j) {
-      v[i][j] = ComputeNextValue(i, j, t);
-    }
-  }
+      #pragma omp section
+      {
+        // Параллелизация внутри секции
+        #pragma omp parallel for schedule(dynamic)
+        for (int i = right; i < n; ++i) {
+          for (std::size_t j = 1; j < bottom; ++j) {
+            v[i][j] = ComputeNextValue(i, j, t);
+          }
+          for (std::size_t j = top + 1; j < m; ++j) {
+            v[i][j] = ComputeNextValue(i, j, t);
+          }
+        }
+      }
+    }  // end of sections
+  }  // end of parallel
 }
+
 
 inline void Solver::CopyMatrix(const Matrix &from, Matrix &to) {
   for (std::size_t i = 0; i < to.size(); ++i) {

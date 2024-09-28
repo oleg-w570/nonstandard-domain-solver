@@ -115,7 +115,7 @@ void Solver::CalculateTrueSolution() {
   }
 }
 
-double Solver::VectorDiffNorm(const Matrix &v1, const Matrix &v2) const {
+inline double Solver::VectorDiffNorm(const Matrix &v1, const Matrix &v2) const {
   double max_diff = 0;
   for (std::size_t i = 0; i < n + 1; ++i) {
     for (std::size_t j = 0; j < m + 1; ++j) {
@@ -133,63 +133,15 @@ inline double Solver::ComputeNextValue(std::size_t i, std::size_t j, double t) c
 }
 
 void Solver::ChebishevLocalIteration(double t) {
-  #pragma omp parallel
-  {
-    #pragma omp sections
-    {
-      #pragma omp section
-      {
-        // Параллелизация внутри секции
-        #pragma omp parallel for schedule(dynamic)
-        for (int i = 1; i < in_left; ++i) {
-          for (std::size_t j = 1; j < m; ++j) {
-            v[i][j] = ComputeNextValue(i, j, t);
-          }
-        }
-      }
-
-      #pragma omp section
-      {
-        // Параллелизация внутри секции
-        #pragma omp parallel for schedule(dynamic)
-        for (int i = in_left; i <= in_right; ++i) {
-          for (std::size_t j = 1; j < bottom; ++j) {
-            v[i][j] = ComputeNextValue(i, j, t);
-          }
-          for (std::size_t j = top + 1; j < m; ++j) {
-            v[i][j] = ComputeNextValue(i, j, t);
-          }
-        }
-      }
-
-      #pragma omp section
-      {
-        // Параллелизация внутри секции
-        #pragma omp parallel for schedule(dynamic)
-        for (int i = in_right + 1; i < right; ++i) {
-          for (std::size_t j = 1; j < m; ++j) {
-            v[i][j] = ComputeNextValue(i, j, t);
-          }
-        }
-      }
-
-      #pragma omp section
-      {
-        // Параллелизация внутри секции
-        #pragma omp parallel for schedule(dynamic)
-        for (int i = right; i < n; ++i) {
-          for (std::size_t j = 1; j < bottom; ++j) {
-            v[i][j] = ComputeNextValue(i, j, t);
-          }
-          for (std::size_t j = top + 1; j < m; ++j) {
-            v[i][j] = ComputeNextValue(i, j, t);
-          }
-        }
-      }
-    }  // end of sections
-  }  // end of parallel
+  #pragma omp parallel for collapse(2)
+  for (int i = 1; i < n; ++i) {
+    for (int j = 1; j < m; ++j) {
+      if ((i >= in_left && i <= in_right || i >= right) && j >= bottom && j <= top)
+        continue;
+      v[i][j] = ComputeNextValue(i, j, t);
+    }
+  }
 }
-
 
 inline void Solver::CopyMatrix(const Matrix &from, Matrix &to) {
   for (std::size_t i = 0; i < to.size(); ++i) {

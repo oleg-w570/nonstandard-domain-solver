@@ -1,3 +1,4 @@
+// Copyright Zorin Oleg
 #include <chrono>
 #include <iostream>
 

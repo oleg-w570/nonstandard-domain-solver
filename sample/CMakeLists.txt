@@ -1,4 +1,4 @@
-file(GLOB HDRS "*.h")
+file(GLOB HDRS "*.hpp")
 file(GLOB SRCS "*.cpp")
 
 add_executable(sample ${SRCS} ${HDRS})

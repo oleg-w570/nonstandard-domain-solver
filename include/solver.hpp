@@ -1,10 +1,11 @@
+// Copyright Zorin Oleg
 #pragma once
 #include <vector>
 
+#include "matrix.hpp"
 #include "task.hpp"
 
 using Vector = std::vector<double>;
-using Matrix = std::vector<std::vector<double>>;
 
 class Solver {
  private:
@@ -35,10 +36,8 @@ class Solver {
   void SetUpChebishevParameters();
   void CalculateBorder(Matrix& z);
   void CalculateTrueSolution();
-  double VectorDiffNorm(const Matrix& v1, const Matrix& v2) const;
   double ComputeNextValue(std::size_t i, std::size_t j, double t) const;
   void ChebishevLocalIteration(double t);
-  void CopyMatrix(const Matrix& from, Matrix& to);
   void ChebishevGlobalIteration();
   void ChebishevMethod();
   void CalculateDiffSolutions();

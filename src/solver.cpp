@@ -1,12 +1,18 @@
+// Copyright Zorin Oleg
 #include "solver.hpp"
 
 #include <cmath>
-#ifndef M_PI
 #define M_PI 3.14159265358979323846
-#endif
 
 Solver::Solver(int n, int m, double eps, int max_iter, int K)
-    : n(n), m(m), eps(eps), max_iter(max_iter), K(K) {
+    : eps(eps),
+      max_iter(max_iter),
+      n(n),
+      m(m),
+      K(K),
+      u(n + 1, Vector(m + 1)),
+      v(n + 1, Vector(m + 1)),
+      diff(n + 1, Vector(m + 1)) {
   SetUpGrid();
   SetUpChebishevParameters();
 }
@@ -93,23 +99,10 @@ void Solver::CalculateBorder(Matrix &z) {
 
 void Solver::CalculateTrueSolution() {
   CalculateBorder(u);
-  std::size_t i, j;
-
-  for (j = 1; j < bottom; ++j) {
-    for (i = 1; i < n; ++i) {
-      u[i][j] = task.U(x[i], y[j]);
-    }
-  }
-  for (j = bottom; j < top + 1; ++j) {
-    for (i = 1; i < in_left; ++i) {
-      u[i][j] = task.U(x[i], y[j]);
-    }
-    for (i = in_right + 1; i < right; ++i) {
-      u[i][j] = task.U(x[i], y[j]);
-    }
-  }
-  for (j = top + 1; j < m; ++j) {
-    for (i = 1; i < n; ++i) {
+#pragma omp parallel for
+  for (std::size_t i = 1; i < n; ++i) {
+    for (std::size_t j = 1; j < m; ++j) {
+      if (((i >= in_left && i <= in_right) || i >= right) && j >= bottom && j <= top) continue;
       u[i][j] = task.U(x[i], y[j]);
     }
   }
@@ -117,6 +110,8 @@ void Solver::CalculateTrueSolution() {
 
 inline double Solver::VectorDiffNorm(const Matrix &v1, const Matrix &v2) const {
   double max_diff = 0;
+
+#pragma omp parallel for reduction(max : max_diff)
   for (std::size_t i = 0; i < n + 1; ++i) {
     for (std::size_t j = 0; j < m + 1; ++j) {
       const double curr_diff = std::abs(v1[i][j] - v2[i][j]);
@@ -133,11 +128,10 @@ inline double Solver::ComputeNextValue(std::size_t i, std::size_t j, double t) c
 }
 
 void Solver::ChebishevLocalIteration(double t) {
-  #pragma omp parallel for collapse(2)
-  for (int i = 1; i < n; ++i) {
-    for (int j = 1; j < m; ++j) {
-      if ((i >= in_left && i <= in_right || i >= right) && j >= bottom && j <= top)
-        continue;
+#pragma omp parallel for
+  for (std::size_t i = 1; i < n; ++i) {
+    for (std::size_t j = 1; j < m; ++j) {
+      if (((i >= in_left && i <= in_right) || i >= right) && j >= bottom && j <= top) continue;
       v[i][j] = ComputeNextValue(i, j, t);
     }
   }
@@ -198,45 +192,28 @@ inline double Solver::ComputeDiscrepancyValue(std::size_t i, std::size_t j) cons
 }
 
 double Solver::CalculateDiscrepancy() {
-  std::size_t i, j;
   double R_max = 0;
 
-  for (j = 1; j < bottom; ++j) {
-    for (i = 1; i < n; ++i) {
+#pragma omp parallel for reduction(max : R_max)
+  for (std::size_t i = 1; i < n; ++i) {
+    for (std::size_t j = 1; j < m; ++j) {
+      if (((i >= in_left && i <= in_right) || i >= right) && j >= bottom && j <= top) continue;
       const double R = ComputeDiscrepancyValue(i, j);
       if (R > R_max) R_max = R;
     }
   }
-  for (j = bottom; j < top + 1; ++j) {
-    for (i = 1; i < in_left; ++i) {
-      const double R = ComputeDiscrepancyValue(i, j);
-      if (R > R_max) R_max = R;
-    }
-    for (i = in_right + 1; i < right; ++i) {
-      const double R = ComputeDiscrepancyValue(i, j);
-      if (R > R_max) R_max = R;
-    }
-  }
-  for (j = top + 1; j < m; ++j) {
-    for (i = 1; i < n; ++i) {
-      const double R = ComputeDiscrepancyValue(i, j);
-      if (R > R_max) R_max = R;
-    }
-  }
+
   return R_max;
 }
 
 void Solver::Solve() {
-  u = Matrix(n + 1, Vector(m + 1));
   CalculateTrueSolution();
 
-  v = Matrix(n + 1, Vector(m + 1));
   CalculateBorder(v);
   R_null = CalculateDiscrepancy();
 
   ChebishevMethod();
   R_res = CalculateDiscrepancy();
 
-  diff = Matrix(n + 1, Vector(m + 1));
   CalculateDiffSolutions();
 }

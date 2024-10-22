@@ -2,7 +2,7 @@
 #include "chebyshev_method.hpp"
 
 #include <cmath>
-#include <numbers>
+constexpr double pi = 3.14159265358979323846;
 
 ChebyshevMethod::ChebyshevMethod(const Task &task, const Grid &grid, const double eps,
                                  const unsigned max_iter, const unsigned K)
@@ -45,7 +45,7 @@ void ChebyshevMethod::run(std::vector<std::vector<double>> &v) {
 }
 
 void ChebyshevMethod::InitializeChebyshevParameters() {
-  constexpr double pi = std::numbers::pi;
+  // constexpr double pi = std::numbers::pi; // Removed as pi is now defined globally
 
   const double M_min = 4 * grid.h2 * std::sin(pi / static_cast<double>(2 * grid.n)) *
                            std::sin(pi / static_cast<double>(2 * grid.n)) +

@@ -27,4 +27,6 @@ class ChebyshevMethod {
  public:
   ChebyshevMethod(const Task &task, const Grid &grid, double eps, unsigned max_iter, unsigned K);
   void run(std::vector<std::vector<double>> &v);
+  [[nodiscard]] double GetAccuracy() const;
+  [[nodiscard]] unsigned GetIterationCount() const;
 };

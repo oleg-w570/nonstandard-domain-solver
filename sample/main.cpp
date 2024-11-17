@@ -1,14 +1,18 @@
 #include <chrono>
 #include <iostream>
+#include <string>
 
 #include "solver.hpp"
 
 using namespace std;
 
 int main(int argc, char *argv[]) {
-//   const int n = atoi(argv[1]);
-  const int n = 256;
-  const int m = n;
+  if (argc != 2) {
+    cerr << "Usage: " << argv[0] << " <number_of_partitions>" << endl;
+    return 1;
+  }
+  const std::size_t n = std::stoull(argv[1]);
+  const std::size_t m = n;
   const double eps = 1e-6;
   const int max_iter = 999999;
   const int K = 16;
@@ -29,14 +33,18 @@ int main(int argc, char *argv[]) {
           "и числом разбиений по y m=«"
        << m << "»." << endl;
 
-  cout << "Метод Чебышева (" << K << "), критерии остановки по точности εмет=«" << eps << "» "
+  cout << "Метод Чебышева (" << K << "), критерии остановки по точности εмет=«"
+       << eps << "» "
        << "и по числу итераций Nmax=«" << max_iter << "»." << endl
        << endl;
 
-  cout << "На решение схемы (СЛАУ) затрачено итераций N=«" << S.GetIterationCount() << "» "
-       << "и достигнута точность итерационного метода ε(N)=«" << S.GetAccuracy() << "»." << endl;
+  cout << "На решение схемы (СЛАУ) затрачено итераций N=«"
+       << S.GetIterationCount() << "» "
+       << "и достигнута точность итерационного метода ε(N)=«" << S.GetAccuracy()
+       << "»." << endl;
 
-  cout << "Схема (СЛАУ) решена с невязкой ||R(N)|| = «" << S.GetResultDiscrepancy() << "» "
+  cout << "Схема (СЛАУ) решена с невязкой ||R(N)|| = «"
+       << S.GetResultDiscrepancy() << "» "
        << "для невязки СЛАУ использована норма «max»." << endl
        << endl;
 
@@ -44,13 +52,15 @@ int main(int argc, char *argv[]) {
           "0.5⋅10^–6; "
        << "задача решена с погрешностью ε1=«" << S.GetMaxDiff() << "»." << endl;
 
-  cout << "Максимальное отклонение точного и численного решений наблюдается в узле x=«"
+  cout << "Максимальное отклонение точного и численного решений наблюдается в "
+          "узле x=«"
        << S.GetMaxDiffX() << "», y=«" << S.GetMaxDiffY() << "»." << endl
        << endl;
 
   cout << "В качестве начального приближения использовано «нулевое»." << endl;
 
-  cout << "Невязка СЛАУ на начальном приближении ||R(0)|| = «" << S.GetInitialDiscrepancy() << "» (max)." << endl;
+  cout << "Невязка СЛАУ на начальном приближении ||R(0)|| = «"
+       << S.GetInitialDiscrepancy() << "» (max)." << endl;
 
   return 0;
 }

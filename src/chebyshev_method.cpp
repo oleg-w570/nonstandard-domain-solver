@@ -29,7 +29,7 @@ void ChebyshevMethod::run(std::vector<std::vector<double>> &v) {
 #pragma omp single
       { v_global_prev = v; }
 
-      for (const auto &t : tau) {
+      for (double t : tau) {
 #pragma omp single
         { std::swap(v_local_prev, v); }
 
@@ -69,8 +69,6 @@ double ChebyshevMethod::GetAccuracy() const { return accuracy; }
 unsigned ChebyshevMethod::GetIterationCount() const { return n_iter; }
 
 void ChebyshevMethod::InitializeChebyshevParameters() {
-  // constexpr double pi = std::numbers::pi; // Removed as pi is now defined globally
-
   const double M_min =
       4 * grid.h2 * std::sin(pi / static_cast<double>(2 * grid.n)) *
           std::sin(pi / static_cast<double>(2 * grid.n)) +
@@ -87,7 +85,7 @@ void ChebyshevMethod::InitializeChebyshevParameters() {
                            std::sin(pi * static_cast<double>(grid.m - 1) /
                                     static_cast<double>(2 * grid.m));
 
-  for (int s = 0; s < K; ++s) {
+  for (unsigned s = 0; s < K; ++s) {
     tau[s] = 1 / (0.5 * (M_max + M_min) +
                   0.5 * (M_max - M_min) * std::cos(pi * (1 + 2 * s) / (2 * K)));
   }

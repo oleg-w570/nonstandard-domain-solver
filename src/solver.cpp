@@ -8,7 +8,8 @@ Solver::Solver(std::size_t n, std::size_t m, double eps, unsigned max_iter,
       method(task, grid, eps, max_iter, K),
       exact_solution(n + 1, std::vector<double>(m + 1)),
       numerical_solution(n + 1, std::vector<double>(m + 1)),
-      diff(n + 1, std::vector<double>(m + 1)) {}
+      diff(n + 1, std::vector<double>(m + 1)),
+      f_values((n + 1) * (m + 1)) {}
 
 void Solver::CalculateExactSolution() {
   const auto is_border = task.GetBorderPredicate(grid.n, grid.m);
@@ -35,6 +36,14 @@ void Solver::InitializeNumericalSolution() {
   }
 }
 
+void Solver::InitializeFValues() {
+  for (std::size_t i = 0; i < grid.n + 1; ++i) {
+    for (std::size_t j = 0; j < grid.m + 1; ++j) {
+      f_values[i * (grid.m + 1) + j] = task.F(grid.x[i], grid.y[j]);
+    }
+  }
+}
+
 double Solver::CalculateDiscrepancy() {
   double max_discrepancy = 0.0;
   const auto skip_node = task.GetSkipNodePredicate(grid.n, grid.m);
@@ -48,7 +57,7 @@ double Solver::CalculateDiscrepancy() {
               (numerical_solution[i - 1][j] + numerical_solution[i + 1][j]) +
           grid.k2 *
               (numerical_solution[i][j - 1] + numerical_solution[i][j + 1]) -
-          task.F(grid.x[i], grid.y[j]));
+          f_values[i * (grid.m + 1) + j]);
       if (discrepancy > max_discrepancy) {
         max_discrepancy = discrepancy;
       }
@@ -76,9 +85,10 @@ void Solver::CalculateDiffSolutions() {
 void Solver::Solve() {
   CalculateExactSolution();
   InitializeNumericalSolution();
+  InitializeFValues();
   initial_discrepancy = CalculateDiscrepancy();
 
-  method.run(numerical_solution);
+  method.run(numerical_solution, f_values);
 
   result_discrepancy = CalculateDiscrepancy();
   CalculateDiffSolutions();

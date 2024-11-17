@@ -18,7 +18,8 @@ ChebyshevMethod::ChebyshevMethod(const Task &task, const Grid &grid,
   InitializeChebyshevParameters();
 }
 
-void ChebyshevMethod::run(std::vector<std::vector<double>> &v) {
+void ChebyshevMethod::run(std::vector<std::vector<double>> &v,
+                          const std::vector<double> &f_values) {
   const auto skip_node = task.GetSkipNodePredicate(grid.n, grid.m);
   v_local_prev = v;
   v_global_prev = v;
@@ -27,23 +28,28 @@ void ChebyshevMethod::run(std::vector<std::vector<double>> &v) {
   {
     while (n_iter < max_iter && accuracy > eps) {
 #pragma omp single
-      { v_global_prev = v; }
+      {
+        v_global_prev = v;
+      }
 
       for (double t : tau) {
 #pragma omp single
-        { std::swap(v_local_prev, v); }
+        {
+          std::swap(v_local_prev, v);
+        }
 
+        const double expr = 1.0 + t * grid.A;
 #pragma omp for
         for (std::size_t i = 1; i < grid.n; ++i) {
           for (std::size_t j = 1; j < grid.m; ++j) {
             if (skip_node(i, j)) continue;
             v[i][j] =
-                v_local_prev[i][j] * (1 + t * grid.A) +
+                v_local_prev[i][j] * expr +
                 t * (grid.k2 *
                          (v_local_prev[i][j - 1] + v_local_prev[i][j + 1]) +
                      grid.h2 *
                          (v_local_prev[i - 1][j] + v_local_prev[i + 1][j]) -
-                     task.F(grid.x[i], grid.y[j]));
+                     f_values[i + (grid.m + 1) + j]);
           }
         }
       }

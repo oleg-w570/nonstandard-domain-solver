@@ -14,12 +14,14 @@ class Solver {
   std::vector<std::vector<double>> exact_solution;
   std::vector<std::vector<double>> numerical_solution;
   std::vector<std::vector<double>> diff;
+  std::vector<double> f_values;
   double max_diff, max_diff_x, max_diff_y;
   double initial_discrepancy;
   double result_discrepancy;
 
   void CalculateExactSolution();
   void InitializeNumericalSolution();
+  void InitializeFValues();
   double CalculateDiscrepancy();
   void CalculateDiffSolutions();
 

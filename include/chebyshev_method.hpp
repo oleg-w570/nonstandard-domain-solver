@@ -21,12 +21,15 @@ class ChebyshevMethod {
   unsigned n_iter;
 
   void InitializeChebyshevParameters();
-  [[nodiscard]] double MaxDifference(const std::vector<std::vector<double>> &v1,
-                                     const std::vector<std::vector<double>> &v2) const;
+  [[nodiscard]] double MaxDifference(
+      const std::vector<std::vector<double>> &v1,
+      const std::vector<std::vector<double>> &v2) const;
 
  public:
-  ChebyshevMethod(const Task &task, const Grid &grid, double eps, unsigned max_iter, unsigned K);
-  void run(std::vector<std::vector<double>> &v);
+  ChebyshevMethod(const Task &task, const Grid &grid, double eps,
+                  unsigned max_iter, unsigned K);
+  void run(std::vector<std::vector<double>> &v,
+           const std::vector<double> &f_values);
   [[nodiscard]] double GetAccuracy() const;
   [[nodiscard]] unsigned GetIterationCount() const;
 };

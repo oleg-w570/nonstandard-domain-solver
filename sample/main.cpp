@@ -14,8 +14,8 @@ int main(int argc, char *argv[]) {
   const std::size_t n = std::stoull(argv[1]);
   const std::size_t m = n;
   const double eps = 1e-6;
-  const int max_iter = 999999;
-  const int K = 16;
+  const unsigned max_iter = 999999999;
+  const unsigned K = 16;
 
   Solver S(n, m, eps, max_iter, K);
 

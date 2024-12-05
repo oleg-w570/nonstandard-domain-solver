@@ -15,6 +15,7 @@ class Solver {
   std::vector<std::vector<double>> numerical_solution;
   std::vector<std::vector<double>> diff;
   std::vector<double> f_values;
+  std::vector<bool> node_mask;
   double max_diff, max_diff_x, max_diff_y;
   double initial_discrepancy;
   double result_discrepancy;
@@ -22,21 +23,24 @@ class Solver {
   void CalculateExactSolution();
   void InitializeNumericalSolution();
   void InitializeFValues();
+  void InitializeNodeMask();
   double CalculateDiscrepancy();
   void CalculateDiffSolutions();
 
- public:
+public:
   Solver(std::size_t n, std::size_t m, double eps, unsigned max_iter,
          unsigned K);
   void Solve();
-  [[nodiscard]] const std::vector<std::vector<double>>& GetExactSolution() const;
-  [[nodiscard]] const std::vector<std::vector<double>>& GetNumericalSolution() const;
-  [[nodiscard]] const std::vector<std::vector<double>>& GetDiff() const;
+  [[nodiscard]] const std::vector<std::vector<double>> &
+  GetExactSolution() const;
+  [[nodiscard]] const std::vector<std::vector<double>> &
+  GetNumericalSolution() const;
+  [[nodiscard]] const std::vector<std::vector<double>> &GetDiff() const;
   [[nodiscard]] double GetMaxDiff() const;
   [[nodiscard]] double GetMaxDiffX() const;
   [[nodiscard]] double GetMaxDiffY() const;
   [[nodiscard]] double GetInitialDiscrepancy() const;
   [[nodiscard]] double GetResultDiscrepancy() const;
   [[nodiscard]] double GetAccuracy() const;
-  [[nodiscard]] unsigned GetIterationCount() const;
+  [[nodiscard]] double GetIterationCount() const;
 };

@@ -3,10 +3,8 @@
 #include <vector>
 
 #include "grid.hpp"
-#include "task.hpp"
 
 class ChebyshevMethod {
-  const Task &task;
   const Grid &grid;
 
   double eps;
@@ -21,15 +19,15 @@ class ChebyshevMethod {
   unsigned n_iter;
 
   void InitializeChebyshevParameters();
-  [[nodiscard]] double MaxDifference(
-      const std::vector<std::vector<double>> &v1,
-      const std::vector<std::vector<double>> &v2) const;
+  [[nodiscard]] auto
+  MaxDifference(const std::vector<std::vector<double>> &v1,
+                const std::vector<std::vector<double>> &v2) const;
 
- public:
-  ChebyshevMethod(const Task &task, const Grid &grid, double eps,
-                  unsigned max_iter, unsigned K);
+public:
+  ChebyshevMethod(const Grid &grid, double eps, unsigned max_iter, unsigned K);
   void run(std::vector<std::vector<double>> &v,
+           const std::vector<bool> &node_mask,
            const std::vector<double> &f_values);
   [[nodiscard]] double GetAccuracy() const;
-  [[nodiscard]] unsigned GetIterationCount() const;
+  [[nodiscard]] double GetIterationCount() const;
 };

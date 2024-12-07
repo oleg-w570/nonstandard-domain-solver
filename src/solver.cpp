@@ -1,8 +1,6 @@
 // Copyright Zorin Oleg
 #include "solver.hpp"
 
-#include <iostream>
-
 Solver::Solver(const std::size_t n, const std::size_t m, const double eps, const unsigned max_iter, const unsigned K)
     : grid(n, m, task.a, task.b, task.c, task.d),
       method(grid, eps, max_iter, K),

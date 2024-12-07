@@ -1,6 +1,5 @@
 // Copyright Zorin Oleg
 #pragma once
-#include <functional>
 #include <vector>
 
 struct Grid {

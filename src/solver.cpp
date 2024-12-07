@@ -1,36 +1,37 @@
 // Copyright Zorin Oleg
-
 #include "solver.hpp"
 
-Solver::Solver(std::size_t n, std::size_t m, double eps, unsigned max_iter,
-               unsigned K)
+#include <iostream>
+
+Solver::Solver(const std::size_t n, const std::size_t m, const double eps, const unsigned max_iter, const unsigned K)
     : grid(n, m, task.a, task.b, task.c, task.d),
       method(grid, eps, max_iter, K),
       exact_solution(n + 1, std::vector<double>(m + 1)),
       numerical_solution(n + 1, std::vector<double>(m + 1)),
-      diff(n + 1, std::vector<double>(m + 1)), f_values((n + 1) * (m + 1)),
+      diff(n + 1, std::vector<double>(m + 1)),
+      f_values((n + 1) * (m + 1)),
       node_mask((n + 1) * (m + 1)) {}
 
 void Solver::CalculateExactSolution() {
-  const auto is_border = task.GetBorderPredicate(grid.n, grid.m);
-  const auto skip_node = task.GetSkipNodePredicate(grid.n, grid.m);
+  const auto is_border = Task::GetBorderPredicate(grid.n, grid.m);
+  const auto skip_node = Task::GetSkipNodePredicate(grid.n, grid.m);
 
   for (std::size_t i = 0; i < grid.n + 1; ++i) {
     for (std::size_t j = 0; j < grid.m + 1; ++j) {
       if (is_border(i, j) || !skip_node(i, j)) {
-        exact_solution[i][j] = task.U(grid.x[i], grid.y[j]);
+        exact_solution[i][j] = Task::U(grid.x[i], grid.y[j]);
       }
     }
   }
 }
 
 void Solver::InitializeNumericalSolution() {
-  const auto is_border = task.GetBorderPredicate(grid.n, grid.m);
+  const auto is_border = Task::GetBorderPredicate(grid.n, grid.m);
 
   for (std::size_t i = 0; i < grid.n + 1; ++i) {
     for (std::size_t j = 0; j < grid.m + 1; ++j) {
       if (is_border(i, j)) {
-        numerical_solution[i][j] = task.U(grid.x[i], grid.y[j]);
+        numerical_solution[i][j] = Task::U(grid.x[i], grid.y[j]);
       }
     }
   }
@@ -39,13 +40,13 @@ void Solver::InitializeNumericalSolution() {
 void Solver::InitializeFValues() {
   for (std::size_t i = 0; i < grid.n + 1; ++i) {
     for (std::size_t j = 0; j < grid.m + 1; ++j) {
-      f_values[i * (grid.m + 1) + j] = task.F(grid.x[i], grid.y[j]);
+      f_values[i * (grid.m + 1) + j] = Task::F(grid.x[i], grid.y[j]);
     }
   }
 }
 
 void Solver::InitializeNodeMask() {
-  const auto skip_node = task.GetSkipNodePredicate(grid.n, grid.m);
+  const auto skip_node = Task::GetSkipNodePredicate(grid.n, grid.m);
 
   for (std::size_t i = 0; i < grid.n + 1; ++i) {
     for (std::size_t j = 0; j < grid.m + 1; ++j) {
@@ -56,19 +57,14 @@ void Solver::InitializeNodeMask() {
 
 double Solver::CalculateDiscrepancy() {
   auto max_discrepancy = 0.0;
-  const auto skip_node = task.GetSkipNodePredicate(grid.n, grid.m);
+  const auto skip_node = Task::GetSkipNodePredicate(grid.n, grid.m);
 
   for (std::size_t i = 1; i < grid.n; ++i) {
     for (std::size_t j = 1; j < grid.m; ++j) {
-      if (node_mask[i * (grid.m + 1) + j])
-        continue;
+      if (node_mask[i * (grid.m + 1) + j]) continue;
       const auto discrepancy = std::abs(
-          grid.A * numerical_solution[i][j] +
-          grid.h2 *
-              (numerical_solution[i - 1][j] + numerical_solution[i + 1][j]) +
-          grid.k2 *
-              (numerical_solution[i][j - 1] + numerical_solution[i][j + 1]) -
-          f_values[i * (grid.m + 1) + j]);
+          grid.A * numerical_solution[i][j] + grid.h2 * (numerical_solution[i - 1][j] + numerical_solution[i + 1][j]) +
+          grid.k2 * (numerical_solution[i][j - 1] + numerical_solution[i][j + 1]) - f_values[i * (grid.m + 1) + j]);
       if (discrepancy > max_discrepancy) {
         max_discrepancy = discrepancy;
       }
@@ -81,8 +77,7 @@ double Solver::CalculateDiscrepancy() {
 void Solver::CalculateDiffSolutions() {
   for (std::size_t i = 0; i < grid.n + 1; ++i) {
     for (std::size_t j = 0; j < grid.m + 1; ++j) {
-      const auto curr_diff =
-          std::abs(exact_solution[i][j] - numerical_solution[i][j]);
+      const auto curr_diff = std::abs(exact_solution[i][j] - numerical_solution[i][j]);
       diff[i][j] = curr_diff;
       if (curr_diff > max_diff) {
         max_diff = curr_diff;
@@ -106,13 +101,9 @@ void Solver::Solve() {
   CalculateDiffSolutions();
 }
 
-const std::vector<std::vector<double>> &Solver::GetExactSolution() const {
-  return exact_solution;
-}
+const std::vector<std::vector<double>> &Solver::GetExactSolution() const { return exact_solution; }
 
-const std::vector<std::vector<double>> &Solver::GetNumericalSolution() const {
-  return numerical_solution;
-}
+const std::vector<std::vector<double>> &Solver::GetNumericalSolution() const { return numerical_solution; }
 
 const std::vector<std::vector<double>> &Solver::GetDiff() const { return diff; }
 

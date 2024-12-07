@@ -27,14 +27,11 @@ class Solver {
   double CalculateDiscrepancy();
   void CalculateDiffSolutions();
 
-public:
-  Solver(std::size_t n, std::size_t m, double eps, unsigned max_iter,
-         unsigned K);
+ public:
+  Solver(std::size_t n, std::size_t m, double eps, unsigned max_iter, unsigned K);
   void Solve();
-  [[nodiscard]] const std::vector<std::vector<double>> &
-  GetExactSolution() const;
-  [[nodiscard]] const std::vector<std::vector<double>> &
-  GetNumericalSolution() const;
+  [[nodiscard]] const std::vector<std::vector<double>> &GetExactSolution() const;
+  [[nodiscard]] const std::vector<std::vector<double>> &GetNumericalSolution() const;
   [[nodiscard]] const std::vector<std::vector<double>> &GetDiff() const;
   [[nodiscard]] double GetMaxDiff() const;
   [[nodiscard]] double GetMaxDiffX() const;

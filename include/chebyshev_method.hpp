@@ -2,32 +2,19 @@
 #pragma once
 #include <vector>
 
-#include "grid.hpp"
+#include "method.hpp"
 
-class ChebyshevMethod {
-  const Grid &grid;
-
-  double eps;
-  unsigned max_iter;
-
-  unsigned K;
-  std::vector<double> tau;
-  std::vector<std::vector<double>> v_local_prev;
-  std::vector<std::vector<double>> v_global_prev;
-
-  double accuracy;
-  unsigned n_iter;
+class ChebyshevMethod : public Method {
+  unsigned K_;
+  std::vector<double> tau_;
+  std::vector<std::vector<double>> v_local_prev_;
+  std::vector<std::vector<double>> v_global_prev_;
 
   void InitializeChebyshevParameters();
-  [[nodiscard]] auto
-  MaxDifference(const std::vector<std::vector<double>> &v1,
-                const std::vector<std::vector<double>> &v2) const;
 
-public:
+ public:
   ChebyshevMethod(const Grid &grid, double eps, unsigned max_iter, unsigned K);
-  void run(std::vector<std::vector<double>> &v,
-           const std::vector<bool> &node_mask,
-           const std::vector<double> &f_values);
-  [[nodiscard]] double GetAccuracy() const;
-  [[nodiscard]] double GetIterationCount() const;
+
+  virtual void run(std::vector<std::vector<double>> &v, const std::vector<bool> &node_mask,
+                   const std::vector<double> &f_values) override;
 };

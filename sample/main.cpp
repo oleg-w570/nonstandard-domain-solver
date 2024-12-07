@@ -1,8 +1,10 @@
 #include <chrono>
 #include <iostream>
+#include <memory>
 #include <string>
 
 #include "solver.hpp"
+#include "task.hpp"
 
 using namespace std;
 
@@ -17,8 +19,7 @@ int main(int argc, char *argv[]) {
   const auto max_iter = 999999999u;
   const auto K = 16u;
 
-
-  Solver S(n, m, eps, max_iter, K);
+  Solver S(std::make_unique<TestTask>(), MethodType::Chebyshev, n, m, eps, max_iter);
 
   const auto begin = chrono::high_resolution_clock::now();
   S.Solve();

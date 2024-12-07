@@ -1,36 +1,36 @@
 // Copyright Zorin Oleg
 #include "solver.hpp"
 
-Solver::Solver(const std::size_t n, const std::size_t m, const double eps, const unsigned max_iter, const unsigned K)
-    : grid(n, m, task.a, task.b, task.c, task.d),
-      method(grid, eps, max_iter, K),
+#include <memory>
+
+#include "chebyshev_method.hpp"
+
+Solver::Solver(std::unique_ptr<Task> task, MethodType method_type, const std::size_t n, const std::size_t m, double eps,
+               unsigned max_iter)
+    : task(std::move(task)),
+      grid(n, m, task->a(), task->b(), task->c(), task->d()),
       exact_solution(n + 1, std::vector<double>(m + 1)),
       numerical_solution(n + 1, std::vector<double>(m + 1)),
       diff(n + 1, std::vector<double>(m + 1)),
       f_values((n + 1) * (m + 1)),
-      node_mask((n + 1) * (m + 1)) {}
-
-void Solver::CalculateExactSolution() {
-  const auto is_border = Task::GetBorderPredicate(grid.n, grid.m);
-  const auto skip_node = Task::GetSkipNodePredicate(grid.n, grid.m);
-
-  for (std::size_t i = 0; i < grid.n + 1; ++i) {
-    for (std::size_t j = 0; j < grid.m + 1; ++j) {
-      if (is_border(i, j) || !skip_node(i, j)) {
-        exact_solution[i][j] = Task::U(grid.x[i], grid.y[j]);
-      }
-    }
+      skip_node_mask((n + 1) * (m + 1)) {
+  const auto K = 16u;
+  switch (method_type) {
+    case MethodType::Chebyshev:
+      method = std::make_unique<ChebyshevMethod>(grid, eps, max_iter, K);
+      break;
+    default:
+      throw std::invalid_argument("Unknown method type");
+      break;
   }
 }
 
-void Solver::InitializeNumericalSolution() {
-  const auto is_border = Task::GetBorderPredicate(grid.n, grid.m);
+void Solver::InitializeNodeMask() {
+  const auto skip_node = task->SkipNodePredicate(grid.n, grid.m);
 
   for (std::size_t i = 0; i < grid.n + 1; ++i) {
     for (std::size_t j = 0; j < grid.m + 1; ++j) {
-      if (is_border(i, j)) {
-        numerical_solution[i][j] = Task::U(grid.x[i], grid.y[j]);
-      }
+      skip_node_mask[i * (grid.m + 1) + j] = skip_node(i, j);
     }
   }
 }
@@ -38,28 +38,42 @@ void Solver::InitializeNumericalSolution() {
 void Solver::InitializeFValues() {
   for (std::size_t i = 0; i < grid.n + 1; ++i) {
     for (std::size_t j = 0; j < grid.m + 1; ++j) {
-      f_values[i * (grid.m + 1) + j] = Task::F(grid.x[i], grid.y[j]);
+      f_values[i * (grid.m + 1) + j] = task->F(grid.x[i], grid.y[j]);
     }
   }
 }
 
-void Solver::InitializeNodeMask() {
-  const auto skip_node = Task::GetSkipNodePredicate(grid.n, grid.m);
+void Solver::ComputeExactSolution() {
+  const auto is_border = task->BorderPredicate(grid.n, grid.m);
+  const auto skip_node = task->SkipNodePredicate(grid.n, grid.m);
 
   for (std::size_t i = 0; i < grid.n + 1; ++i) {
     for (std::size_t j = 0; j < grid.m + 1; ++j) {
-      node_mask[i * (grid.m + 1) + j] = skip_node(i, j);
+      if (is_border(i, j) || !skip_node_mask[i * (grid.m + 1) + j]) {
+        exact_solution[i][j] = task->U(grid.x[i], grid.y[j]);
+      }
     }
   }
 }
 
-double Solver::CalculateDiscrepancy() {
+void Solver::InitializeNumericalSolution() {
+  const auto is_border = task->BorderPredicate(grid.n, grid.m);
+
+  for (std::size_t i = 0; i < grid.n + 1; ++i) {
+    for (std::size_t j = 0; j < grid.m + 1; ++j) {
+      if (is_border(i, j)) {
+        numerical_solution[i][j] = task->U(grid.x[i], grid.y[j]);
+      }
+    }
+  }
+}
+
+double Solver::ComputeDiscrepancy() {
   auto max_discrepancy = 0.0;
-  const auto skip_node = Task::GetSkipNodePredicate(grid.n, grid.m);
 
   for (std::size_t i = 1; i < grid.n; ++i) {
     for (std::size_t j = 1; j < grid.m; ++j) {
-      if (node_mask[i * (grid.m + 1) + j]) continue;
+      if (skip_node_mask[i * (grid.m + 1) + j]) continue;
       const auto discrepancy = std::abs(
           grid.A * numerical_solution[i][j] + grid.h2 * (numerical_solution[i - 1][j] + numerical_solution[i + 1][j]) +
           grid.k2 * (numerical_solution[i][j - 1] + numerical_solution[i][j + 1]) - f_values[i * (grid.m + 1) + j]);
@@ -72,7 +86,7 @@ double Solver::CalculateDiscrepancy() {
   return max_discrepancy;
 }
 
-void Solver::CalculateDiffSolutions() {
+void Solver::ComputeDiffSolutions() {
   for (std::size_t i = 0; i < grid.n + 1; ++i) {
     for (std::size_t j = 0; j < grid.m + 1; ++j) {
       const auto curr_diff = std::abs(exact_solution[i][j] - numerical_solution[i][j]);
@@ -89,14 +103,16 @@ void Solver::CalculateDiffSolutions() {
 void Solver::Solve() {
   InitializeNodeMask();
   InitializeFValues();
-  CalculateExactSolution();
+  ComputeExactSolution();
   InitializeNumericalSolution();
-  initial_discrepancy = CalculateDiscrepancy();
 
-  method.run(numerical_solution, node_mask, f_values);
+  initial_discrepancy = ComputeDiscrepancy();
 
-  result_discrepancy = CalculateDiscrepancy();
-  CalculateDiffSolutions();
+  method->run(numerical_solution, skip_node_mask, f_values);
+
+  result_discrepancy = ComputeDiscrepancy();
+
+  ComputeDiffSolutions();
 }
 
 const std::vector<std::vector<double>> &Solver::GetExactSolution() const { return exact_solution; }
@@ -115,6 +131,6 @@ double Solver::GetInitialDiscrepancy() const { return initial_discrepancy; }
 
 double Solver::GetResultDiscrepancy() const { return result_discrepancy; }
 
-double Solver::GetAccuracy() const { return method.GetAccuracy(); }
+double Solver::GetAccuracy() const { return method->accuracy(); }
 
-double Solver::GetIterationCount() const { return method.GetIterationCount(); }
+double Solver::GetIterationCount() const { return method->iteration_count(); }

@@ -17,6 +17,7 @@ int main(int argc, char *argv[]) {
   const auto max_iter = 999999999u;
   const auto K = 16u;
 
+
   Solver S(n, m, eps, max_iter, K);
 
   const auto begin = chrono::high_resolution_clock::now();
